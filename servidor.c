@@ -13,6 +13,7 @@
 #define MYPORT 5000    // porta usada para receber conexao
 #define SERVER_IP "127.0.0.1"    // IP do server fixado
 #define MAXBUFLEN 100
+#define MAXCLIENTS 50
 #define MINSIZEMSG 10
 #define REGISTER_202 "202 Accepted 127.0.0.1 5000"
 #define REGISTER_402 "402 Duplicated Name"
@@ -24,8 +25,46 @@
 #define INFO "INFO"
 #define NOT_IMPLEMENTED "501 Not Implemented"
 
+struct node{
+    char* nome_usuario; //NULL
+    char* ip_usuario;//NULL
+    unsigned short porta_usuario; //Lixo
+    struct node* nextUser;//NULL
+};
+
+typedef struct node nocliente;
+
+void insert(nocliente* raiz, char* nome_usuario, char* ip_usuario, unsigned short porta_usuario){
+    if(raiz->nome_usuario == NULL){
+        //Alocando
+        raiz->nome_usuario = malloc((strlen(nome_usuario)+1) * sizeof(char));
+        raiz->ip_usuario = malloc((strlen(ip_usuario)+1) * sizeof(char));
+        raiz->nextUser = malloc(sizeof(nocliente));
+        //Atribuindo
+        strcpy(raiz->nome_usuario,nome_usuario);
+        strcpy(raiz->ip_usuario,ip_usuario);
+        raiz->porta_usuario = porta_usuario;
+    }else{
+        insert(raiz->nextUser, nome_usuario, ip_usuario, porta_usuario);
+    }
+}
+
+nocliente* consulta(nocliente* raiz, char* nome_usuario){
+    nocliente* currentNode = raiz;
+    if(currentNode->nome_usuario == NULL){
+        return NULL;
+    }else{
+        if(strcmp(currentNode->nome_usuario, nome_usuario) == 0){
+            return currentNode;
+        }else{
+            return consulta(currentNode->nextUser, nome_usuario);
+        }
+    }
+}
+
 int main(void)
 {
+    nocliente raiz;
     int sockfd;
     struct sockaddr_in my_addr;    // meu endereço 
     struct sockaddr_in their_addr; // endereço do cliente
@@ -74,7 +113,15 @@ int main(void)
         sscanf(buf,"%s",clntMsg);
         
         if(strcmp(clntMsg, REGISTER)==0){
-            strcat(retMsg,REGISTER_202);
+            char clntName[MAXBUFLEN];
+            sscanf(buf,"%s%s",clntMsg,clntName);
+            nocliente* result = consulta(&raiz, clntName);
+            if(result == NULL){
+                insert(&raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
+                strcat(retMsg,REGISTER_202);
+            }else{
+                strcat(retMsg,REGISTER_402);
+            }
         }else{
             if(strcmp(clntMsg, UNREGISTER) == 0){
                 strcat(retMsg,UNREGISTER_200);
