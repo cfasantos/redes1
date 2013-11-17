@@ -18,7 +18,7 @@
 #define REGISTER_202 "202 Accepted 127.0.0.1 5000"
 #define REGISTER_402 "402 Duplicated Name"
 #define UNREGISTER_200 "200 Ok"
-#define UNREGISTER_404 "404 Not Found"
+#define ERROR_404 "404 Not Found"
 #define INFO_200 "200 Ok "
 #define REGISTER "REGISTER"
 #define UNREGISTER "UNREGISTER"
@@ -40,6 +40,7 @@ void insert(nocliente* raiz, char* nome_usuario, char* ip_usuario, unsigned shor
         raiz->nome_usuario = malloc((strlen(nome_usuario)+1) * sizeof(char));
         raiz->ip_usuario = malloc((strlen(ip_usuario)+1) * sizeof(char));
         raiz->nextUser = malloc(sizeof(nocliente));
+        raiz->nextUser->nextUser = NULL;
         //Atribuindo
         strcpy(raiz->nome_usuario,nome_usuario);
         strcpy(raiz->ip_usuario,ip_usuario);
@@ -49,14 +50,38 @@ void insert(nocliente* raiz, char* nome_usuario, char* ip_usuario, unsigned shor
     }
 }
 
-nocliente* consulta(nocliente* raiz, char* nome_usuario){
+void removeNode(nocliente* raiz, char* nome_usuario){
     nocliente* currentNode = raiz;
+    nocliente* anteriorNode = NULL;
+    while(strcmp(currentNode->nome_usuario,nome_usuario) !=0){
+        anteriorNode = currentNode;
+        currentNode = currentNode->nextUser;
+    }
+    free(currentNode->nome_usuario);
+    free(currentNode->ip_usuario);
+    if(anteriorNode == NULL){
+        raiz = currentNode->nextUser;
+    }else{
+        anteriorNode->nextUser = currentNode->nextUser;
+    }
+    free(currentNode);
+}
+
+nocliente* consulta(nocliente* raiz, char* nome_usuario){
+    //printf("consulta1\n");
+    nocliente* currentNode = raiz;
+    //printf("consulta2\n");
+    //printf("%d",raiz == NULL);
+    //fflush(stdout);
     if(currentNode->nome_usuario == NULL){
+        //printf("consulta3\n");
         return NULL;
     }else{
         if(strcmp(currentNode->nome_usuario, nome_usuario) == 0){
+            //printf("consulta4\n");
             return currentNode;
         }else{
+            //printf("consulta5\n");
             return consulta(currentNode->nextUser, nome_usuario);
         }
     }
@@ -64,7 +89,7 @@ nocliente* consulta(nocliente* raiz, char* nome_usuario){
 
 int main(void)
 {
-    nocliente raiz;
+    nocliente* raiz = malloc(sizeof(nocliente));
     int sockfd;
     struct sockaddr_in my_addr;    // meu endereço 
     struct sockaddr_in their_addr; // endereço do cliente
@@ -110,25 +135,45 @@ int main(void)
         printf("Recebido pacote com conteúdo \"%s\"\n", buf);
         
         char clntMsg[MAXBUFLEN];
+        char clntName[MAXBUFLEN];
         sscanf(buf,"%s",clntMsg);
         
         if(strcmp(clntMsg, REGISTER)==0){
-            char clntName[MAXBUFLEN];
             sscanf(buf,"%s%s",clntMsg,clntName);
-            nocliente* result = consulta(&raiz, clntName);
+            //printf("preregister4\n");
+            nocliente* result = consulta(raiz, clntName);
+            //printf("preregister5\n");
             if(result == NULL){
-                insert(&raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
+                //printf("preregister6\n");
+                insert(raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
                 strcat(retMsg,REGISTER_202);
             }else{
                 strcat(retMsg,REGISTER_402);
             }
         }else{
             if(strcmp(clntMsg, UNREGISTER) == 0){
-                strcat(retMsg,UNREGISTER_200);
+                sscanf(buf,"%s%s",clntMsg,clntName);
+                nocliente* result = consulta(raiz, clntName);
+                if(result == NULL){
+                    strcat(retMsg,ERROR_404);
+                }else{
+                    removeNode(raiz, clntName);
+                    strcat(retMsg,UNREGISTER_200);
+                }
             }else{
                 if(strcmp(clntMsg, INFO) == 0){
-                    strcat(retMsg,INFO_200);
-                    strcat(retMsg,inet_ntoa(their_addr.sin_addr));
+                    sscanf(buf,"%s%s",clntMsg,clntName);
+                    nocliente* result = consulta(raiz, clntName);
+                    if(result == NULL){
+                        strcat(retMsg,ERROR_404);
+                    }else{
+                        strcat(retMsg,INFO_200);
+                        strcat(retMsg,result->ip_usuario);
+                        strcat(retMsg," ");
+                        char porta_usuario[20];
+                        sprintf(porta_usuario,"%d",result->porta_usuario);
+                        strcat(retMsg,porta_usuario);
+                    }
                 }else{
                     strcat(retMsg,NOT_IMPLEMENTED);
                 }
