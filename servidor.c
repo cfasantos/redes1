@@ -34,26 +34,26 @@ struct node{
 
 typedef struct node nocliente;
 
-void insert(nocliente* raiz, char* nome_usuario, char* ip_usuario, unsigned short porta_usuario){
-    if(raiz->nome_usuario == NULL){
+void insert(nocliente** raiz, char* nome_usuario, char* ip_usuario, unsigned short porta_usuario){
+    if((*raiz)->nome_usuario == NULL){
         //Alocando
-        raiz->nome_usuario = malloc((strlen(nome_usuario)+1) * sizeof(char));
-        raiz->ip_usuario = malloc((strlen(ip_usuario)+1) * sizeof(char));
-        raiz->nextUser = malloc(sizeof(nocliente));
+        (*raiz)->nome_usuario = malloc((strlen(nome_usuario)+1) * sizeof(char));
+        (*raiz)->ip_usuario = malloc((strlen(ip_usuario)+1) * sizeof(char));
+        (*raiz)->nextUser = malloc(sizeof(nocliente));
         //Atribuindo
-        strcpy(raiz->nome_usuario,nome_usuario);
-        strcpy(raiz->ip_usuario,ip_usuario);
-        raiz->porta_usuario = porta_usuario;
-        raiz->nextUser->nome_usuario = NULL;
-        raiz->nextUser->ip_usuario = NULL;
-        raiz->nextUser->nextUser = NULL;
+        strcpy((*raiz)->nome_usuario,nome_usuario);
+        strcpy((*raiz)->ip_usuario,ip_usuario);
+        (*raiz)->porta_usuario = porta_usuario;
+        (*raiz)->nextUser->nome_usuario = NULL;
+        (*raiz)->nextUser->ip_usuario = NULL;
+        (*raiz)->nextUser->nextUser = NULL;
     }else{
-        insert(raiz->nextUser, nome_usuario, ip_usuario, porta_usuario);
+        insert(&(*raiz)->nextUser, nome_usuario, ip_usuario, porta_usuario);
     }
 }
 
-void removeNode(nocliente* raiz, char* nome_usuario){
-    nocliente* currentNode = raiz;
+void removeNode(nocliente** raiz, char* nome_usuario){
+    nocliente* currentNode = (*raiz);
     nocliente* anteriorNode = NULL;
     while(strcmp(currentNode->nome_usuario,nome_usuario) !=0){
         anteriorNode = currentNode;
@@ -62,17 +62,16 @@ void removeNode(nocliente* raiz, char* nome_usuario){
     free(currentNode->nome_usuario);
     free(currentNode->ip_usuario);
     if(anteriorNode == NULL){
-        raiz = currentNode->nextUser;
+        *(raiz) = currentNode->nextUser;
     }else{
         anteriorNode->nextUser = currentNode->nextUser;
     }
     free(currentNode);
 }
 
-nocliente* consulta(nocliente* raiz, char* nome_usuario){
-    nocliente* currentNode = raiz;
+nocliente* consulta(nocliente** raiz, char* nome_usuario){
+    nocliente* currentNode = (*raiz);
     if(currentNode->nome_usuario == NULL){
-        //printf("consulta3\n");
         return NULL;
     }else{
         if(strcmp(currentNode->nome_usuario, nome_usuario) == 0){
@@ -80,7 +79,7 @@ nocliente* consulta(nocliente* raiz, char* nome_usuario){
             return currentNode;
         }else{
             //printf("consulta5\n");
-            return consulta(currentNode->nextUser, nome_usuario);
+            return consulta(&(currentNode->nextUser), nome_usuario);
         }
     }
 }
@@ -139,11 +138,11 @@ int main(void)
         if(strcmp(clntMsg, REGISTER)==0){
             sscanf(buf,"%s%s",clntMsg,clntName);
             //printf("preregister4\n");
-            nocliente* result = consulta(raiz, clntName);
+            nocliente* result = consulta(&raiz, clntName);
             //printf("preregister5\n");
             if(result == NULL){
                 //printf("preregister6\n");
-                insert(raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
+                insert(&raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
                 strcat(retMsg,REGISTER_202);
             }else{
                 strcat(retMsg,REGISTER_402);
@@ -151,17 +150,17 @@ int main(void)
         }else{
             if(strcmp(clntMsg, UNREGISTER) == 0){
                 sscanf(buf,"%s%s",clntMsg,clntName);
-                nocliente* result = consulta(raiz, clntName);
+                nocliente* result = consulta(&raiz, clntName);
                 if(result == NULL){
                     strcat(retMsg,ERROR_404);
                 }else{
-                    removeNode(raiz, clntName);
+                    removeNode(&raiz, clntName);
                     strcat(retMsg,UNREGISTER_200);
                 }
             }else{
                 if(strcmp(clntMsg, INFO) == 0){
                     sscanf(buf,"%s%s",clntMsg,clntName);
-                    nocliente* result = consulta(raiz, clntName);
+                    nocliente* result = consulta(&raiz, clntName);
                     if(result == NULL){
                         strcat(retMsg,ERROR_404);
                     }else{
