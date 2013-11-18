@@ -40,11 +40,13 @@ void insert(nocliente* raiz, char* nome_usuario, char* ip_usuario, unsigned shor
         raiz->nome_usuario = malloc((strlen(nome_usuario)+1) * sizeof(char));
         raiz->ip_usuario = malloc((strlen(ip_usuario)+1) * sizeof(char));
         raiz->nextUser = malloc(sizeof(nocliente));
-        raiz->nextUser->nextUser = NULL;
         //Atribuindo
         strcpy(raiz->nome_usuario,nome_usuario);
         strcpy(raiz->ip_usuario,ip_usuario);
         raiz->porta_usuario = porta_usuario;
+        raiz->nextUser->nome_usuario = NULL;
+        raiz->nextUser->ip_usuario = NULL;
+        raiz->nextUser->nextUser = NULL;
     }else{
         insert(raiz->nextUser, nome_usuario, ip_usuario, porta_usuario);
     }
@@ -68,11 +70,7 @@ void removeNode(nocliente* raiz, char* nome_usuario){
 }
 
 nocliente* consulta(nocliente* raiz, char* nome_usuario){
-    //printf("consulta1\n");
     nocliente* currentNode = raiz;
-    //printf("consulta2\n");
-    //printf("%d",raiz == NULL);
-    //fflush(stdout);
     if(currentNode->nome_usuario == NULL){
         //printf("consulta3\n");
         return NULL;
