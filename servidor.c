@@ -15,7 +15,8 @@
 #define MAXBUFLEN 100
 #define MAXCLIENTS 50
 #define MINSIZEMSG 10
-#define REGISTER_202 "202 Accepted 127.0.0.1 5000"
+//#define REGISTER_202 "202 Accepted 127.0.0.1 5000"
+#define REGISTER_202 "202 Accepted "
 #define REGISTER_402 "402 Duplicated Name"
 #define UNREGISTER_200 "200 Ok"
 #define ERROR_404 "404 Not Found"
@@ -112,6 +113,8 @@ int main(void)
         perror("Erro ao realizar o bind do servidor");
     }
     
+
+    
     int a = 1;
     
     char retMsg[MAXBUFLEN];
@@ -144,6 +147,18 @@ int main(void)
                 //printf("preregister6\n");
                 insert(&raiz, clntName, inet_ntoa(their_addr.sin_addr), their_addr.sin_port);
                 strcat(retMsg,REGISTER_202);
+                //Pega IP Servidor
+                char szHostName[255];
+                gethostname(szHostName, 255);
+                struct hostent *host_entry;
+                host_entry=gethostbyname(szHostName);
+                char * szLocalIP;
+                szLocalIP = inet_ntoa (*(struct in_addr *)*host_entry->h_addr_list);
+                strcat(retMsg,szLocalIP);
+                //Pega porta servidor
+                char porta_servidor[20];
+                sprintf(porta_servidor," %d",ntohs(my_addr.sin_port));
+                strcat(retMsg,porta_servidor);
             }else{
                 strcat(retMsg,REGISTER_402);
             }
